@@ -164,16 +164,16 @@ abstract contract ticketingSystem is ERC20 {
 
     }
 
-    function offerTicketForSale(uint _ticketId, uint _salePrice) public payable{
+    function offerTicketForSale(uint _ticketId, uint _salePrice) public {
         require(ticketsRegister[_ticketId].ticketOwner == msg.sender, "You are not the owner");
-        require(msg.value == _salePrice, "Not the exact amount of money");
         require(_salePrice <= concertsRegister[ticketsRegister[_ticketId].concertId].ticketPrice, "The amount is higher than the initial price.");
         require(ticketsRegister[_ticketId].isAvailable, "The ticket is already used");
         
     }
 
-    function buySecondHandTicket(uint _ticketId) public {
-        
+    function buySecondHandTicket(uint _ticketId) public payable{
+        require(msg.value == , "Not the exact amount of money");
+
     }
 
 }
