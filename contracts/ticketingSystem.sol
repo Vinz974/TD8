@@ -1,53 +1,52 @@
 pragma solidity >=0.5 ;
+pragma experimental ABIEncoderV2;
 
-import "./ERC20.sol";
-
-abstract contract ticketingSystem is ERC20 {
+contract ticketingSystem {
 
     struct Artist{
         bytes32 name;
-        uint category;
+        uint artistCategory;
         uint totalTicketSold;
-        address payable owner;
+        address owner;
+        address payable payad;
     }
 
     event NewArtist(bytes32 _name, uint _type, uint _totalTicketSold,address payable owner);
     event NewVenue(bytes32 _name, uint _capacity, uint _standardComission, address _owner);
     event NewConcert(uint _artistId, uint _venueId, uint _concertDate, uint _ticketPrice, address _owner);
     event NewTicket(uint _concertId, address _ticketOwner);
-    mapping(uint=>Venue) IdToVenue;
-    mapping(uint => Artist) IdToArtist;
-    mapping(uint=> Concert) IdToConcert;
-    mapping(uint=> Ticket) IdToTicket;
-    Artist[] public artistsRegister;
-    Venue[] public venuesRegister;
-    Concert[] public concertsRegister;
-    Ticket[] public ticketsRegister;
+    uint VenueCount =1;
+    uint ArtistCount =1;
+    uint ConcertCount =1;
+    uint TicketCount =1;
+    mapping(uint => Artist) artistsRegistered;
+    mapping(uint => Venue) venuesRegistered;
+    mapping(uint => Concert) concertsRegistered;
+    mapping(uint => Ticket) ticketsRegistered;
 
     function createArtist(bytes32 _name, uint _typ) public returns(uint){
-        Artist memory A = Artist(_name, _typ, 0, msg.sender);
-        artistsRegister.push(A);
-        uint id = artistsRegister.length;
-        IdToArtist[id] = A;
+        Artist memory A = Artist(_name, _typ, 0, msg.sender, msg.sender);
+        artistsRegistered[ArtistCount] = A;
+        ArtistCount = ArtistCount + 1;
         emit NewArtist(_name, _typ, 0, msg.sender);
     }
 
     function modifyArtist(uint _artistId, bytes32 _name, uint _artistCategory, address payable _newOwner)
     public OnlyOwnerArtist(_artistId){
-        IdToArtist[_artistId].name = _name;
-        IdToArtist[_artistId].category = _artistCategory;
-        artistsRegister[_artistId].owner = _newOwner;
+        artistsRegistered[_artistId].name = _name;
+        artistsRegistered[_artistId].artistCategory = _artistCategory;
+        artistsRegistered[_artistId].owner = _newOwner;
     }
-
     struct Venue{
         bytes32 name;
         uint capacity;
         uint standardComission;
-        address payable owner;
+        address owner;
+        address payable payad;
     }
 
     struct Concert{
-        uint date;
+        uint concertDate;
         uint artistId;
         uint ticketPrice;
         uint totalSoldTicket;
@@ -55,131 +54,156 @@ abstract contract ticketingSystem is ERC20 {
         uint venueId;
         bool validatedByArtist;
         bool validatedByVenue;
-        address payable owner;
+        address owner;
+        address payable payad;
     }
 
     struct Ticket{
         uint concertId;
-        address payable ticketOwner;
+        address owner;
+        address payable payad;
         bool isAvailable;
         bool isAvailableForSale;
+        uint amountPaid;
     }
 
     function createConcert(uint _artistId, uint _venueId, uint _concertDate, uint _ticketPrice) public{
         bool validatedByArtist = false;
-        if( msg.sender == IdToArtist[_artistId].owner){
+        if( msg.sender == artistsRegistered[_artistId].owner){
             validatedByArtist = true;
         }
         bool validatedByVenue = false;
-        if( msg.sender == IdToVenue[_venueId].owner){
+        if( msg.sender == venuesRegistered[_venueId].owner){
             validatedByVenue = true;
         }
-        Concert memory C = Concert(_concertDate, _artistId, _ticketPrice, 0, 0, _venueId, validatedByArtist, validatedByVenue, msg.sender);
-        concertsRegister.push(C);
-        IdToConcert[concertsRegister.length] = C;
+        Concert memory C = Concert(_concertDate, _artistId, _ticketPrice, 0, 0,
+        _venueId, validatedByArtist, validatedByVenue, msg.sender, msg.sender);
+        concertsRegistered[ConcertCount] = C;
+        ConcertCount = ConcertCount + 1;
         emit NewConcert(_artistId, _venueId, _concertDate, _ticketPrice,  msg.sender);
     }
 
     function createVenue(bytes32 _name, uint _capacity, uint _standardComission) public {
-        Venue memory V = Venue(_name, _capacity,_standardComission, msg.sender);
-        venuesRegister.push(V);
-        IdToVenue[venuesRegister.length] = V;
+        Venue memory V = Venue(_name, _capacity,_standardComission, msg.sender, msg.sender);
+        venuesRegistered[VenueCount] = V;
+        VenueCount = VenueCount + 1;
         emit NewVenue(_name, _capacity, _standardComission, msg.sender);
     }
 
     function modifyVenue(uint _venueId, bytes32 _name, uint _capacity, uint _standardComission, address payable _newOwner)
     public OnlyOwnerVenue(_venueId){
-        IdToVenue[_venueId].name = _name;
-        IdToVenue[_venueId].owner = _newOwner;
-        IdToVenue[_venueId].capacity = _capacity;
-        IdToVenue[_venueId].standardComission = _standardComission;
+        venuesRegistered[_venueId].name = _name;
+        venuesRegistered[_venueId].owner = _newOwner;
+        venuesRegistered[_venueId].capacity = _capacity;
+        venuesRegistered[_venueId].standardComission = _standardComission;
     }
 
     modifier OnlyOwnerArtist(uint _artistId) {
-        require(artistsRegister[_artistId].owner == msg.sender, "You are not the owner.");
+        require(artistsRegistered[_artistId].owner == msg.sender, "You are not the owner.");
         _;
     }
     modifier OnlyOwnerConcert(uint _concertId) {
-        require(concertsRegister[_concertId].owner == msg.sender, "You are not the owner.");
+        require(concertsRegistered[_concertId].owner == msg.sender, "You are not the owner.");
         _;
     }
     modifier OnlyOwnerVenue(uint _venueId) {
-        require(venuesRegister[_venueId].owner == msg.sender, "You are not the owner.");
+        require(venuesRegistered[_venueId].owner == msg.sender, "You are not the owner.");
         _;
     }
     modifier OnlyOwnerTicket(uint _ticketId) {
-        require(ticketsRegister[_ticketId].ticketOwner == msg.sender, "You are not the owner.");
+        require(ticketsRegistered[_ticketId].owner == msg.sender, "You are not the owner.");
         _;
     }
 
-    function validateConcert(uint _concertId) public OnlyOwnerArtist(concertsRegister[_concertId].artistId)
-    OnlyOwnerVenue(concertsRegister[_concertId].venueId){
-        if(artistsRegister[concertsRegister[_concertId].artistId].owner == msg.sender){
-            concertsRegister[_concertId].validatedByArtist = true;
+    function validateConcert(uint _concertId) public {
+        if(artistsRegistered[concertsRegistered[_concertId].artistId].owner == msg.sender){
+            concertsRegistered[_concertId].validatedByArtist = true;
         }
-        if(venuesRegister[concertsRegister[_concertId].venueId].owner == msg.sender){
-            concertsRegister[_concertId].validatedByVenue = true;
+        if(venuesRegistered[concertsRegistered[_concertId].venueId].owner == msg.sender){
+            concertsRegistered[_concertId].validatedByVenue = true;
         }
 
     }
 
-    function emitTicket(uint _concertId, address payable _ticketOwner) public OnlyOwnerArtist(concertsRegister[_concertId].artistId){
-        Ticket memory T = Ticket(_concertId, _ticketOwner, false, false);
-        ticketsRegister.push(T);
-        IdToTicket[ticketsRegister.length] = T;
+    function emitTicket(uint _concertId, address payable _ticketOwner) public {
+        require(msg.sender == artistsRegistered[concertsRegistered[_concertId].artistId].owner, "Problem");
+        Ticket memory T = Ticket(_concertId,_ticketOwner, _ticketOwner, true, false,concertsRegistered[_concertId].ticketPrice);
+        ticketsRegistered[TicketCount] = T;
+        TicketCount = TicketCount + 1;
+        concertsRegistered[_concertId].totalSoldTicket = concertsRegistered[_concertId].totalSoldTicket + 1;
+        emit NewTicket(_concertId, _ticketOwner);
+    }
+
+    function emitTicket2(uint _concertId, address _ticketOwner) public {
+        Ticket memory T = Ticket(_concertId,_ticketOwner, msg.sender, true, false,concertsRegistered[_concertId].ticketPrice);
+        ticketsRegistered[TicketCount] = T;
+        TicketCount = TicketCount + 1;
+        concertsRegistered[_concertId].totalSoldTicket = concertsRegistered[_concertId].totalSoldTicket + 1;
         emit NewTicket(_concertId, _ticketOwner);
     }
 
 
-    function useTicket(uint _ticketId) public OnlyOwnerTicket(_ticketId){
-        if(block.timestamp >= concertsRegister[ticketsRegister[_ticketId].concertId].date - 1 days &&
-        block.timestamp <= concertsRegister[ticketsRegister[_ticketId].concertId].date){
-            ticketsRegister[_ticketId].isAvailable = false;
-        }
+    function useTicket(uint _ticketId) public {
+        require (msg.sender == ticketsRegistered[_ticketId].owner, "Problem");
+        require (block.timestamp >= concertsRegistered[ticketsRegistered[_ticketId].concertId].concertDate - 1 days &&
+        block.timestamp <= concertsRegistered[ticketsRegistered[_ticketId].concertId].concertDate, "Problem");
+            ticketsRegistered[_ticketId].isAvailable = false;
     }
 
     function buyTicket(uint _concertId) public payable{
-        require(msg.value == concertsRegister[_concertId].ticketPrice, "Not the good price for ticket.");
-        concertsRegister[_concertId].owner.transfer(msg.value);
-        concertsRegister[_concertId].totalSoldTicket = concertsRegister[_concertId].totalSoldTicket.add(1);
-        concertsRegister[_concertId].totalMoneyCollected = concertsRegister[_concertId].totalMoneyCollected.add(msg.value);
-        artistsRegister[concertsRegister[_concertId].artistId].totalTicketSold = artistsRegister[concertsRegister[_concertId].artistId].totalTicketSold.add(1);
-        emitTicket(_concertId, msg.sender);
+        require(msg.value == concertsRegistered[_concertId].ticketPrice, "Not the good price for ticket.");
+        concertsRegistered[_concertId].payad.transfer(msg.value);
+        concertsRegistered[_concertId].totalMoneyCollected = concertsRegistered[_concertId].totalMoneyCollected + msg.value;
+        uint intermediary = artistsRegistered[concertsRegistered[_concertId].artistId].totalTicketSold + 1;
+        artistsRegistered[concertsRegistered[_concertId].artistId].totalTicketSold = intermediary;
+        emitTicket2(_concertId, msg.sender);
     }
 
     function transferTicket(uint _ticketId, address payable _newOwner) public OnlyOwnerTicket(_ticketId){
-        _transfer2(msg.sender, _newOwner, _ticketId);
+        ticketsRegistered[_ticketId].owner = _newOwner;
     }
 
-    function _transfer2(address _from, address payable _to, uint _ticketId) public payable {
-        ticketsRegister[_ticketId].ticketOwner = _to;
-        emit Transfer(_from, _to, _ticketId);
-    }
-
-    function cashOutConcert(uint _concertId, address payable _cashOutAddress) public payable OnlyOwnerConcert(_concertId) {
-        require(block.timestamp >= concertsRegister[_concertId].date, "You can't cash out now.");
-        require(msg.value == concertsRegister[_concertId].totalMoneyCollected, "You didn't gave the exact amount of money");
-        _cashOutAddress.transfer(msg.value * venuesRegister[concertsRegister[_concertId].venueId].standardComission / 10000);
-        venuesRegister[concertsRegister[_concertId].venueId].owner.transfer(msg.value - msg.value * venuesRegister[concertsRegister[_concertId].venueId].standardComission / 10000);
-
+    function cashOutConcert(uint _concertId, address payable _cashOutAddress) public {
+        require(block.timestamp >= concertsRegistered[_concertId].concertDate, "You can't cash out now.");
+        uint inte = concertsRegistered[_concertId].totalMoneyCollected;
+        artistsRegistered[concertsRegistered[_concertId].artistId].payad
+        .transfer(inte * venuesRegistered[concertsRegistered[_concertId].venueId].standardComission / 10000);
+        venuesRegistered[concertsRegistered[_concertId].venueId].payad.transfer(
+            inte - inte * venuesRegistered[concertsRegistered[_concertId].venueId].standardComission / 10000);
     }
 
     mapping(uint=> uint) salePrices;
 
     function offerTicketForSale(uint _ticketId, uint _salePrice) public {
-        require(ticketsRegister[_ticketId].ticketOwner == msg.sender, "You are not the owner");
-        require(_salePrice <= concertsRegister[ticketsRegister[_ticketId].concertId].ticketPrice, "The amount is higher than the initial price.");
-        require(ticketsRegister[_ticketId].isAvailable, "The ticket is already used");
-        ticketsRegister[_ticketId].isAvailableForSale = true;
+        require(ticketsRegistered[_ticketId].owner == msg.sender, "You are not the owner");
+        require(_salePrice <= concertsRegistered[ticketsRegistered[_ticketId].concertId].ticketPrice,
+        "The amount is higher than the initial price.");
+        require(ticketsRegistered[_ticketId].isAvailable, "The ticket is already used");
+        ticketsRegistered[_ticketId].isAvailableForSale = true;
         salePrices[_ticketId] = _salePrice;
     }
 
     function buySecondHandTicket(uint _ticketId) public payable{
         require(msg.value == salePrices[_ticketId], "Not the exact amount of money");
-        require( ticketsRegister[_ticketId].isAvailable, "Ticket already used.");
-        ticketsRegister[_ticketId].ticketOwner.transfer(msg.value);
-        ticketsRegister[_ticketId].isAvailableForSale = false;
-        ticketsRegister[_ticketId].ticketOwner = msg.sender;
+        require(ticketsRegistered[_ticketId].isAvailable, "Ticket already used.");
+        ticketsRegistered[_ticketId].payad.transfer(msg.value);
+        ticketsRegistered[_ticketId].isAvailableForSale = false;
+        ticketsRegistered[_ticketId].owner = msg.sender;
     }
 
+    function artistsRegister( uint Id) public view returns(Artist memory) {
+        return artistsRegistered[Id];
+    }
+
+    function concertsRegister( uint Id) public view returns(Concert memory) {
+        return concertsRegistered[Id];
+    }
+
+    function venuesRegister( uint Id) public view returns(Venue memory) {
+        return venuesRegistered[Id];
+    }
+
+    function ticketsRegister( uint Id) public view returns(Ticket memory) {
+        return ticketsRegistered[Id];
+    }
 }
