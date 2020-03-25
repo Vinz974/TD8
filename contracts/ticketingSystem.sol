@@ -60,7 +60,7 @@ abstract contract ticketingSystem is ERC20 {
 
     struct Ticket{
         uint concertId;
-        address ticketOwner;
+        address payable ticketOwner;
         bool isAvailable;
         bool isAvailableForSale;
     }
@@ -134,7 +134,7 @@ abstract contract ticketingSystem is ERC20 {
     function useTicket(uint _ticketId) public OnlyOwnerTicket(_ticketId){
         if(block.timestamp >= concertsRegister[ticketsRegister[_ticketId].concertId].date - 1 days &&
         block.timestamp <= concertsRegister[ticketsRegister[_ticketId].concertId].date){
-            ticketsRegister[_ticketId].isAvailable = true;
+            ticketsRegister[_ticketId].isAvailable = false;
         }
     }
 
@@ -151,7 +151,7 @@ abstract contract ticketingSystem is ERC20 {
         _transfer2(msg.sender, _newOwner, _ticketId);
     }
 
-    function _transfer2(address _from, address _to, uint _ticketId) public payable {
+    function _transfer2(address _from, address payable _to, uint _ticketId) public payable {
         ticketsRegister[_ticketId].ticketOwner = _to;
         emit Transfer(_from, _to, _ticketId);
     }
@@ -164,16 +164,22 @@ abstract contract ticketingSystem is ERC20 {
 
     }
 
+    mapping(uint=> uint) salePrices;
+
     function offerTicketForSale(uint _ticketId, uint _salePrice) public {
         require(ticketsRegister[_ticketId].ticketOwner == msg.sender, "You are not the owner");
         require(_salePrice <= concertsRegister[ticketsRegister[_ticketId].concertId].ticketPrice, "The amount is higher than the initial price.");
         require(ticketsRegister[_ticketId].isAvailable, "The ticket is already used");
-        
+        ticketsRegister[_ticketId].isAvailableForSale = true;
+        salePrices[_ticketId] = _salePrice;
     }
 
     function buySecondHandTicket(uint _ticketId) public payable{
-        require(msg.value == , "Not the exact amount of money");
-
+        require(msg.value == salePrices[_ticketId], "Not the exact amount of money");
+        require( ticketsRegister[_ticketId].isAvailable, "Ticket already used.");
+        ticketsRegister[_ticketId].ticketOwner.transfer(msg.value);
+        ticketsRegister[_ticketId].isAvailableForSale = false;
+        ticketsRegister[_ticketId].ticketOwner = msg.sender;
     }
 
 }
