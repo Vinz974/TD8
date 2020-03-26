@@ -146,8 +146,9 @@ contract ticketingSystem {
     function useTicket(uint _ticketId) public {
         require (msg.sender == ticketsRegistered[_ticketId].owner, "Problem");
         require (block.timestamp >= concertsRegistered[ticketsRegistered[_ticketId].concertId].concertDate - 1 days &&
-        block.timestamp <= concertsRegistered[ticketsRegistered[_ticketId].concertId].concertDate, "Problem");
-            ticketsRegistered[_ticketId].isAvailable = false;
+            block.timestamp <= concertsRegistered[ticketsRegistered[_ticketId].concertId].concertDate + 1 days, "Problem");
+        require(concertsRegistered[ticketsRegistered[_ticketId].concertId].validatedByVenue,"Problem");
+        ticketsRegistered[_ticketId].isAvailable = false;
     }
 
     function buyTicket(uint _concertId) public payable{
@@ -163,9 +164,10 @@ contract ticketingSystem {
         ticketsRegistered[_ticketId].owner = _newOwner;
     }
 
-    function cashOutConcert(uint _concertId, address payable _cashOutAddress) public {
+    function cashOutConcert(uint _concertId, address payable _cashOutAddress) public payable {
+        require (msg.sender == concertsRegistered[_concertId].owner,"Problem");
         require(block.timestamp >= concertsRegistered[_concertId].concertDate, "You can't cash out now.");
-        uint inte = concertsRegistered[_concertId].totalMoneyCollected;
+        uint inte = msg.value;
         artistsRegistered[concertsRegistered[_concertId].artistId].payad
         .transfer(inte * venuesRegistered[concertsRegistered[_concertId].venueId].standardComission / 10000);
         venuesRegistered[concertsRegistered[_concertId].venueId].payad.transfer(
